@@ -4,6 +4,7 @@ var path = require('path'),
     http = require('http'),
     https = require('https'),
     express = require('express'),
+    os = require('os'),
     open = require('open'),
     Mustache = require('mustache'),
     glob = require('glob'),
@@ -14,16 +15,24 @@ var staticDir = express.static;
 
 var serverBasePath = path.resolve(__dirname + '/../');
 
+var isWin = os.platform().match(/^win/) != null && true || false;
+
 var opts = {
     port: 1948,
     userBasePath: process.cwd(),
     revealBasePath: serverBasePath + '/node_modules/reveal.js/',
     template: fs.readFileSync(serverBasePath + '/template/reveal.html').toString(),
     templateListing: fs.readFileSync(serverBasePath + '/template/listing.html').toString(),
+    title: 'Reveal.js',
     theme: 'default',
     separator: '^\n---\n$',
     vertical: '^\n----\n$'
 };
+
+if ( isWin ) {
+    opts.separator = '^\r\n---\r\n';
+    opts.vertical = '^\r\n----\r\n';
+}
 
 app.configure(function() {
     [ 'css', 'js', 'images', 'plugin', 'lib' ].forEach(function(dir) {
@@ -38,6 +47,8 @@ var startMarkdownServer = function(basePath, initialMarkdownPath, port, theme, s
     opts.theme = theme || opts.theme;
     opts.separator = separator || opts.separator;
     opts.vertical = vertical || opts.vertical;
+
+    opts.title = path.basename(initialMarkdownPath, '.md');
 
     generateMarkdownListing();
 
@@ -82,6 +93,7 @@ var render = function(res, markdown) {
     slides = md.slidifyMarkdown(markdown, opts.separator, opts.vertical);
 
     res.send(Mustache.to_html(opts.template, {
+        title: opts.title,
         theme: opts.theme,
         slides: slides
     }));
